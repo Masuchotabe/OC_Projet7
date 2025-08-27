@@ -55,7 +55,7 @@ def calculate_combination(combination):
 
 def find_best_combination(stocks, max_budget=500):
     """
-    Find the best combination of stocks for a maximum budget
+    Find the best combination of stocks for a maximum budget with basic greedy algorithm.
     :param stocks: list of stocks (Dict)
     :param max_budget: maximum budget
     :return: best combination for this maximum budget
@@ -64,9 +64,7 @@ def find_best_combination(stocks, max_budget=500):
     total_profit = 0
     total_cost = 0
 
-    #TODO : Implement an algo to calculate best profit without calculate all combination
-    #       Need to be done under one minute
-
+    # sort stocks by profit percentage
     stocks.sort(key=lambda stock: stock['profit_percentage'], reverse=True)
 
     for stock in stocks:
@@ -75,6 +73,20 @@ def find_best_combination(stocks, max_budget=500):
             total_cost += stock['cost']
             total_profit += stock_profit
             best_combination.append(stock)
+
+    return best_combination, total_profit, total_cost
+
+
+def find_best_combination_dp(stocks, max_budget=500):
+    """
+    Find the best combination of stocks for a maximum budget with dynamic programming
+    :param stocks: list of stocks (Dict)
+    :param max_budget: maximum budget
+    :return: best combination for this maximum budget
+    """
+    best_combination = []
+    total_profit = 0
+    total_cost = 0
 
     return best_combination, total_profit, total_cost
 
