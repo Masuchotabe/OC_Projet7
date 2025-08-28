@@ -22,35 +22,15 @@ def read_csv_file(filename):
         for row in reader:
             stock = {
                 'name': row['Actions #'],
-                'cost': float(row['Coût par action (en euros)']),
-                'profit_percentage': float(row['Bénéfice (après 2 ans)'][:-1]),
+                'cost': int(row['Coût par action (en euros)']),
+                'profit_percentage': float(row['Bénéfice (après 2 ans)'][:-1])
             }
+            stock['profit'] = stock['cost'] * (stock['profit_percentage'] / 100)
             if LOGGER.isEnabledFor(logging.DEBUG):
                 LOGGER.debug(f"Read stock: {stock}")
             stocks.append(stock)
     LOGGER.info(f"CSV file read successfully, {len(stocks)} stocks found")
     return stocks
-
-
-def calculate_combination(combination):
-    """
-    Calculate cost and profit for a combination of stocks
-    :param combination: tuple of stock (Dict)
-    :return: total cost and profit
-    """
-    total_cost = 0
-    total_profit = 0
-    if LOGGER.isEnabledFor(logging.DEBUG): # needed to not calculate the fstrings and have a good execution time
-        LOGGER.debug(f"Calculating combination: {combination}")
-
-    for stock in combination:
-        total_cost += stock['cost']
-        stock_profit = stock['cost'] * (stock['profit_percentage'] / 100)
-        total_profit += stock_profit
-
-    if LOGGER.isEnabledFor(logging.DEBUG):
-        LOGGER.debug(f"Combination calculated: {total_cost=}, {total_profit=}")
-    return total_cost, total_profit
 
 
 def find_best_combination(stocks, max_budget=500):
@@ -84,10 +64,35 @@ def find_best_combination_dp(stocks, max_budget=500):
     :param max_budget: maximum budget
     :return: best combination for this maximum budget
     """
-    best_combination = []
-    total_profit = 0
-    total_cost = 0
+    # création table vide de longueur max budget + 1 et hauteur nb stock + 1
+    dp = [[0 for _ in range(max_budget + 1) ] for _ in range(len(stocks) + 1)]
+    for stock_index in range(1, len(stocks)+1):  # parcours des lignes du tableau à partir de 1
+        for actual_budget in range(1, max_budget + 1):
+            # calcul pour chaque budget de 1 en 1 entre 1 et le budget max
+            if stocks[stock_index-1]['cost'] <= actual_budget:
+                # calcul avec cout de l'objet en cours --> on prend la valeur de la ligne précédente pour un budget = Buget actuel - cout de l'action actuelle
+                actual_result = dp[stock_index-1][actual_budget-stocks[stock_index-1]['cost']] + stocks[stock_index-1]['profit']
+                previous_result = dp[stock_index-1][actual_budget]
+                if actual_result > previous_result:
+                    dp[stock_index][actual_budget] = actual_result
+                else:
+                    dp[stock_index][actual_budget] = previous_result
+                dp[stock_index][actual_budget] = max(actual_result, previous_result)
+            else:  # on ne peut pas prendre cette action, on garde le résultat de l'objet précédent
+                dp[stock_index][actual_budget] = dp[stock_index-1][actual_budget]
 
+    best_combination = []
+
+    budget = max_budget
+    for i in range(len(stocks), 0, -1):
+        if dp[i][budget] != dp[i-1][budget]:
+            best_combination.append(stocks[i-1])
+            budget -= stocks[i-1]['cost']
+
+
+    best_combination.reverse()
+    total_profit = dp[len(stocks)][max_budget]
+    total_cost = sum([stock['cost'] for stock in best_combination])
     return best_combination, total_profit, total_cost
 
 
@@ -106,7 +111,7 @@ def main():
 
     stocks = read_csv_file(filename)
 
-    best_combination, best_profit, best_cost = find_best_combination(stocks, max_budget)
+    best_combination, best_profit, best_cost = find_best_combination_dp(stocks, max_budget)
 
     print("RESULTS : ")
     print(f"Profit after 2 years : {best_profit:.2f}")
